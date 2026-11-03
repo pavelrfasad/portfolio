@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Раскрой, спецификация и КП — Павел Рыбальченко</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Личный проект: раскрой и маркировка деталей из DXF, карты раскроя листов и прутков с учётом пропила и припусков.">
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f4f9;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto 20px auto;
+      padding: 20px;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      box-sizing: border-box;
+    }
+
+    h1,
+    h2 {
+      text-align: center;
+      color: #333;
+      margin: 0;
+    }
+
+    .file-input-container,
+    .progress-bar-container,
+    .layer-inputs-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .file-input-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .file-input-container label {
+      display: block;
+      width: 100%;
+      padding: 15px 20px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      background-color: #fff;
+      color: #333;
+      box-sizing: border-box;
+    }
+
+    .file-input-container input[type="file"] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      background-color: #e0e0e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .snake-progress-fill {
+      height: 100%;
+      width: 0%;
+      background-color: #4caf50;
+      transition: width 0.5s ease;
+      border-radius: 10px;
+    }
+
+    .layer-inputs-container {
+      width: 100%;
+      gap: 15px;
+    }
+
+    .layer-item {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      background-color: #f9f9f9;
+      box-sizing: border-box;
+    }
+
+    .layer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .layer-header input[type="text"] {
+      flex-grow: 1;
+    }
+
+    .extra-fields {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+      transition: max-height 0.3s ease;
+      overflow: hidden;
+      max-height: 0;
+      align-items: center;
+    }
+
+    .extra-fields.open {
+      max-height: 1000px;
+    }
+
+    .extra-fields > * {
+      flex: 1 1 150px;
+      min-width: 100px;
+    }
+
+    .angular-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex: 0 0 auto;
+      min-width: 150px;
+    }
+
+    .convert-bars-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex: 0 0 auto;
+      min-width: 220px;
+    }
+
+    .extra-fields label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .extra-fields input[type="number"] {
+      flex: 1 1 100px;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+
+    .rotate-checkbox {
+      width: 24px;
+      height: 24px;
+      background-size: contain;
+      background-repeat: no-repeat;
+      border: none;
+      cursor: pointer;
+      transition: none;
+      background-color: transparent;
+      margin-top: 5px;
+    }
+
+    .rotate-checkbox.active {
+      background-image: url('https://fonts.gstatic.com/s/i/materialicons/sync/v1/24px.svg');
+    }
+
+    .rotate-checkbox.inactive {
+      background-image: url('https://fonts.gstatic.com/s/i/materialicons/sync_disabled/v1/24px.svg');
+    }
+
+    .rotate-checkbox[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      top: -25px;
+      left: 0;
+      background-color: #333;
+      color: #fff;
+      padding: 5px;
+      border-radius: 5px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .rotate-checkbox:hover {
+      background-color: transparent;
+    }
+
+    button {
+      background-color: #333;
+      color: #fff;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+    }
+
+    button:hover {
+      background-color: #555;
+    }
+
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+
+    .button-container {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+      width: 100%;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .button-container button {
+      flex: 1 1 200px;
+      margin: 0;
+      border-radius: 8px;
+    }
+
+    .reset-button {
+      background-color: #8b1e1e;
+    }
+
+    .reset-button:hover {
+      background-color: #a52828;
+    }
+
+    pre {
+      background-color: #f0f0f0;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+    }
+
+    details {
+      max-width: 1000px;
+      margin: 20px auto;
+      background: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      background-color: #f1f1f1;
+      cursor: pointer;
+      outline: none;
+      transition: background-color 0.3s ease;
+    }
+
+    summary:hover {
+      background-color: #ddd;
+    }
+
+    summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .content {
+      padding: 20px;
+      overflow: auto;
+      max-height: 80vh;
+    }
+
+    .icon-button {
+      background: #333;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      border-radius: 8px;
+      transition: background-color 0.3s ease;
+    }
+
+    .icon-button img {
+      width: 24px;
+      height: 24px;
+      transition: transform 0.3s ease;
+    }
+
+    .icon-button:hover {
+      background-color: #555;
+    }
+
+    .icon-button:hover img {
+      transform: scale(1.1);
+    }
+
+    .svg-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1000px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      overflow: hidden;
+    }
+
+    .svg-wrapper svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .progress-container {
+      width: 100%;
+      background-color: #f3f3f3;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .progress-container.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 8px;
+      background-color: #4caf50;
+      border-radius: 8px;
+      transition: width 0.4s ease;
+      font-size: 0;
+    }
+
+    .oversized-block {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid #e0b4b4;
+      border-radius: 8px;
+      background-color: #fff8f8;
+      padding: 15px;
+      box-sizing: border-box;
+    }
+
+    .oversized-block.hidden {
+      display: none;
+    }
+
+    .oversized-info {
+      color: #7a1f1f;
+      margin: 0 0 12px 0;
+      line-height: 1.5;
+    }
+
+    .oversized-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 700px;
+      background-color: #fff;
+    }
+
+    .oversized-table th,
+    .oversized-table td {
+      border: 1px solid #d9d9d9;
+      padding: 10px 12px;
+      text-align: left;
+      vertical-align: top;
+      font-size: 14px;
+    }
+
+    .oversized-table th {
+      background-color: #f3f3f3;
+      color: #333;
+    }
+
+    .oversized-empty {
+      color: #666;
+      text-align: center;
+      padding: 10px 0 0 0;
+    }
+
+    @media print {
+      @page {
+        margin: 0;
+      }
+
+      body * {
+        visibility: hidden;
+      }
+
+      #printSection,
+      #printSection * {
+        visibility: visible;
+      }
+
+      #printSection {
+        position: absolute;
+        left: 0;
+        top: 0;
+      }
+
+      .svg-wrapper {
+        page-break-after: always;
+      }
+
+      .svg-wrapper svg {
+        width: 794px;
+        height: 1123px;
+      }
+    }
+  </style>
+<style>
+body{background:#efeee8}.project-intro{max-width:1000px;margin:0 auto 25px;color:#272b27;font:14px/1.65 Arial,sans-serif}.project-intro>a{color:#52634c;text-decoration:none;border-bottom:1px solid #a8b19e}.project-label{display:block;font:10px monospace;letter-spacing:1px;margin:25px 0 15px;color:#6e736b}.project-intro h2{text-align:left;color:#272b27;font-size:32px;font-weight:400;line-height:1.15;margin-bottom:18px}.project-intro>p{max-width:820px}.project-intro details{border-top:1px solid #cdd0c5;border-bottom:1px solid #cdd0c5;padding:12px 0}.project-intro summary{cursor:pointer;background:none;color:inherit;padding:0;display:list-item;font-size:14px;font-weight:400}.project-intro li{margin:10px 0}.project-intro .local-note{font-size:12px;color:#6e736b;margin:15px 0 0}.container{border-radius:0;box-shadow:none;border:1px solid #d8dbd1}.container h1{font-size:24px;font-weight:400}.container h2{font-size:20px}.oversized-block{overflow-x:auto}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid #b65132;outline-offset:3px}@media(max-width:600px){body{padding:14px}.container{padding:15px}.project-intro h2{font-size:27px}.button-container{flex-wrap:wrap}.container h1{font-size:20px}.layer-header{flex-wrap:wrap}#svgContainer{overflow-x:auto;display:block}}@media print{.project-intro{display:none}}
+</style><style>.cutting-download{margin:22px 0}.cutting-download>a{display:inline-block;background:#272b27;color:#efeee8;padding:12px 18px;text-decoration:none;font-size:13px}.cutting-download p{font-size:12px;color:#6e736b}.cross-mark{border-left:2px solid #b65132;padding:2px 0 2px 18px;margin:25px 0}.cross-mark h3{margin:0 0 9px;font-size:17px;font-weight:400}.cross-mark p{margin:0;font-size:13px;max-width:820px}</style><link rel="stylesheet" href="table.css"><style>.demo-notice{border-left:3px solid #df3f2f;background:#e7e8df;padding:15px 18px;margin:22px 0;font-size:13px}.demo-notice p{margin:7px 0 0}.demo-notice strong{font-weight:600}#specification{margin-top:30px}.project-intro h2{max-width:900px}</style></head>
+<body>
+<section class="project-intro" aria-label="О проекте"><a href="../">← Портфолио Павла Рыбальченко</a><span class="project-label">ЛИЧНЫЙ ПРОЕКТ / JAVASCRIPT</span><h2>Комплексный инструмент раскроя и подготовки спецификации и КП</h2><p>Раскрой листовых и линейных материалов по DXF, перекрёстная маркировка деталей, подготовка спецификации и шаблона коммерческого предложения.</p><aside class="demo-notice"><strong>Только для демонстрации</strong><p>Демонстрационная версия: раскрой материалов, спецификация и шаблон коммерческого предложения. Персонализация под процессы компании выполняется по запросу с учётом безопасности корпоративных данных; внутренние каталоги, цены и реквизиты в демонстрацию не включены.</p></aside><div class="cutting-download"><a href="../assets/fasssad-blocks.dxf" download="Блоки для fasssad.dxf">↓ Скачать блоки для работы · DXF</a><p>Используйте файл с подготовленными блоками как основу для чертежа.</p></div><div class="cross-mark"><h3>Перекрёстная маркировка для КМД</h3><p>Инструмент связывает деталь на карте раскроя с блоком в чертеже одной и той же маркой. Производство видит, какую заготовку изготовить, а монтажник — где она должна стоять. Общая маркировка помогает сопоставлять детали на листе, в КМД и на площадке.</p></div><details><summary>Как подготовить файл и запустить раскрой</summary><ol><li>Экспортируйте чертёж из AutoCAD в DXF. Размеры берутся из атрибутов блоков «РАЗМЕР»: например, 400×600 для листовой детали или 1200 для линейной. Для маркировки нужен атрибут «МАРКИРОВКА».</li><li>Загрузите файл. Для нужных слоёв включите «Раскрой», укажите размеры заготовки, припуски, ширину пропила и разрешите поворот, если он допустим.</li><li>При необходимости задайте префиксы и нажмите «Маркировать». Нажмите «Раскроить», проверьте карту и список непоместившихся деталей.</li><li>Скачайте обновлённый DXF. Кнопка со стрелкой над картой открывает печать. Спецификация и КП доступны ниже; обе вкладки можно сохранить в Excel, а текущую — распечатать или сохранить в PDF.</li></ol></details><p class="local-note">DXF обрабатывается в вашем браузере и не отправляется на сервер. Раскрой использует размеры из атрибутов, а не произвольные контуры деталей.</p></section>
+  <div class="container">
+    <h1>Загрузка DXF и параметры раскроя</h1>
+
+    <div class="file-input-container">
+      <input type="file" id="file-input" />
+      <label id="file-label">Выберите DXF-файл</label>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="snake-progress-fill"></div>
+    </div>
+
+    <div class="layer-inputs-container" id="layer-inputs"></div>
+
+    <p id="cutting-status" role="status" aria-live="polite">Загрузите DXF для начала работы.</p><div class="button-container">
+      <button id="mark-button" style="display:none;">Маркировать</button>
+      <button id="optimize-btn">Раскроить</button>
+      <button id="reset-optimize-btn" class="reset-button">Сбросить раскрой</button>
+      <button id="download-button" style="display:none;">Скачать обновлённый DXF</button>
+    </div>
+
+    <pre id="output" style="display:none;"></pre>
+  </div>
+
+
+  <div class="container">
+    <h2>Элементы, которые не поместились</h2>
+    <div id="oversized-block" class="oversized-block hidden">
+      <p class="oversized-info">
+        Ниже показаны элементы, которые не удалось разместить в заданном листе или прутке.
+        По этой таблице можно скорректировать размеры заготовки и запустить раскрой заново.
+      </p>
+      <table class="oversized-table">
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>Маркировка</th>
+            <th>Материал</th>
+            <th>Цвет</th>
+            <th>Тип</th>
+            <th>Размер элемента</th>
+            <th>Размер заготовки</th>
+            <th>Слой</th>
+            <th>Блок</th>
+          </tr>
+        </thead>
+        <tbody id="oversized-table-body"></tbody>
+      </table>
+    </div>
+    <div id="oversized-empty" class="oversized-empty">
+      После раскроя сюда будет выведен список элементов, которые не поместились.
+    </div>
+  </div>
+
+  <div class="container map-container">
+    <details open>
+      <summary>
+        Показать/скрыть карту раскроя
+        <button class="icon-button" id="downloadPdf" disabled>
+          <span aria-hidden="true">↓</span><span class="visually-hidden">Печать карты / PDF</span>
+        </button>
+      </summary>
+      <div class="content">
+        <div id="jsonProgressContainer" class="progress-container">
+          <div id="jsonProgressBar" class="progress-bar">0%</div>
+        </div>
+        <div class="container" id="svgContainer"></div>
+      </div>
+    </details>
+  </div>
+
+  <section class="container" id="specification" aria-label="Спецификация и коммерческое предложение"><h2>Материалы и стоимость</h2><div class="table-meta"><label>Название проекта<input id="project-title" placeholder="Название проекта"></label><label>Площадь фасада, м²<input id="facade-area" type="number" min="0" step="any"></label><label>Валюта<select id="quote-currency"><option>RUB</option><option>ARS</option><option>USD</option><option>EUR</option></select></label></div><div class="table-tabs" role="tablist" aria-label="Таблицы материалов"><button type="button" data-sheet="spec" role="tab" aria-selected="true">Спецификация</button><button type="button" data-sheet="quote" role="tab" aria-selected="false">КП</button></div><div class="table-toolbar"><button type="button" id="add-row">+ Строка</button><button type="button" id="show-all">Все столбцы</button><button type="button" id="export-excel">Скачать Excel</button><button type="button" id="export-pdf">PDF / печать</button><button type="button" id="export-json">Сохранить JSON</button><label class="table-file">Открыть JSON<input id="import-json" type="file" accept=".json"></label></div><p id="table-status" role="status" aria-live="polite">Загрузите DXF или добавьте строки вручную.</p><p id="table-empty">Данных пока нет.</p><div id="materials-table" role="tabpanel" aria-label="Материалы проекта"></div><p id="table-total"></p><details><summary>Столбцы</summary><div id="column-options"></div></details><p class="table-note">Количество, цены и наценки общие для обеих вкладок. Запас и кратность применяются к количеству из DXF, а после раскроя — к фактически использованным заготовкам. Кнопка ↳ добавляет сопутствующую строку с расходом на единицу базового материала. Отключённые строки не входят в экспорт. Загрузка другого DXF заменяет текущие материалы; сохраните JSON, чтобы продолжить позже.</p></section>
+<div id="table-print"></div><script src="table-model.js"></script><script src="table.js"></script><script src="cutting.js"></script>
+</body>
+</html>
